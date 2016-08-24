@@ -13,19 +13,25 @@ class LearningAgent(Agent):
         self.color = 'red'  # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
         # TODO: Initialize any additional variables here
-        self.qtable = np.zeros((96,4))
-        self.states=[]
+        self.qtable = {}
         self.actions=["right","forward","left",None]
         self.previousstate=None
         self.previousreward=0
         self.previousaction = None
-        self.alpha = .5
-        self.gamma = .2
-        self.epsilon = .1
+        self.alpha = 0.9
+        self.gamma = 0
+        self.epsilon = 0
+        self.success=0
+        self.totalpenalties=0
+        self.penalties = 0
     def reset(self, destination=None):
         self.planner.route_to(destination)
         # TODO: Prepare for a new trip; reset any variables here, if required
-
+        if self.penalties>0:self.totalpenalties+=1        
+        self.previousstate==None
+        self.previousreward=0
+        self.previousaction = None
+        self.penalties=0
     def update(self, t):
         # Gather inputs
         self.next_waypoint = self.planner.next_waypoint()  # from route planner, also displayed by simulator
@@ -36,26 +42,27 @@ class LearningAgent(Agent):
         self.state = (inputs['light'],inputs['oncoming'],inputs['left'],self.next_waypoint)
                 
         # TODO: Select action according to your policy
-        if self.state in self.states:
+        if self.state in self.qtable.keys():
             if random.random()<self.epsilon: action=random.choice(self.actions) #epsilon
-            else:action = self.actions[np.argmax(self.qtable,1)[self.states.index(self.state)]]
+            else:action = self.actions[np.argmax(self.qtable[self.state])]
         else: 
             action=random.choice(self.actions)
-            self.states.append(self.state)
+            self.qtable[self.state]=[0,0,0,0]
         # Execute action and get reward
         reward = self.env.act(self, action)
-        
+        if reward==12:
+            self.success+=1
+            
+        elif reward<0:self.penalties+=1
         # TODO: Learn policy based on state, action, reward
         if self.previousaction!=None:
-            stin = self.states.index(self.previousstate)
-            actin = self.actions.index(self.previousaction)
-            self.qtable[stin,actin]=(1-self.alpha)*self.qtable[stin,actin] + self.alpha*(self.previousreward+self.gamma * np.argmax(self.qtable,1)[self.states.index(self.state)])
-        self.previousaction=action
+            self.qtable[self.previousstate][self.previousaction]=(1-self.alpha)*self.qtable[self.previousstate][self.previousaction] + self.alpha*(self.previousreward+self.gamma * max(self.qtable[self.state]))
+        self.previousaction=self.actions.index(action)
         self.previousreward = reward
         self.previousstate=self.state
          
          
-        #print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
+      #  print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
        # print len(self.states)
 
 def run():
@@ -70,9 +77,11 @@ def run():
     # Now simulate it
     sim = Simulator(e, update_delay=0, display=False)  # create simulator (uses pygame when display=True, if available)
     # NOTE: To speed up simulation, reduce update_delay and/or set display=False
-
-    sim.run(n_trials=10)  # run for a specified number of trials
+    trials = 100
+    sim.run(n_trials=trials)  # run for a specified number of trials
     # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
-    print a.qtable
+    if a.penalties>0:a.totalpenalties+=1
+    print "%s successful trials out of %s total trials with %s penalties" % (a.success,trials,a.totalpenalties)
+
 if __name__ == '__main__':
     run()
