@@ -51,7 +51,7 @@ class LearningAgent(Agent):
         # Execute action and get reward
         reward = self.env.act(self, action)
         if reward==12:
-            self.success+=1
+            self.success+=1 #count successful trials
             
         elif reward<0:self.penalties+=1
         # TODO: Learn policy based on state, action, reward
@@ -60,6 +60,7 @@ class LearningAgent(Agent):
         self.previousaction=self.actions.index(action)
         self.previousreward = reward
         self.previousstate=self.state
+        
          
          
       #  print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
